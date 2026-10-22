@@ -36,6 +36,6 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "An unexpected server error occurred." });
 });
 
-app.listen(port, () => {
-  console.log(`Multiverse Chat API running on http://localhost:${port}`);
+app.listen(port, "127.0.0.1", () => {
+  console.log(`Multiverse Chat API running on http://127.0.0.1:${port}`);
 });
