@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Menu, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowUp, Menu, RotateCcw, Settings, Sparkles } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import StarterPrompts from "./StarterPrompts";
 import CharacterAvatar from "./CharacterAvatar";
 
-export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview }) {
+export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview, onEdit, onOpenSettings }) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef(null);
 
@@ -38,9 +38,9 @@ export default function ChatWindow({ character, messages, loading, error, onSend
             <p className="mt-1 text-xs text-slate-500">{character.universe} universe · AI persona</p>
           </div>
         </div>
-        <button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
+        <div className="flex items-center gap-2"><button onClick={onOpenSettings} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white" title="Gemini API key settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button><button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
           <RotateCcw size={14} /><span className="hidden sm:inline">New chat</span>
-        </button>
+        </button></div>
       </header>
 
       <div className="chat-scroll flex-1 overflow-y-auto px-4 py-7 sm:px-8">
@@ -57,6 +57,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
               key={message.id}
               message={message}
               character={character}
+              onEdit={onEdit}
               streaming={loading && index === messages.length - 1 && message.role === "assistant"}
             />
           ))}

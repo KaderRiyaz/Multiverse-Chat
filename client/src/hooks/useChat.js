@@ -68,36 +68,10 @@ export function useChat(characters) {
     setError("");
   }, [characters]);
 
-  const sendMessage = useCallback(async (rawMessage) => {
-    const message = rawMessage.trim();
-    const characterId = activeIdRef.current;
-    if (!message || loadingRef.current) return;
-
+  const streamResponse = useCallback(async ({ characterId, message, conversationHistory, userMessage, assistantMessage }) => {
     loadingRef.current = true;
     setLoading(true);
     setError("");
-
-    const userMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message
-    };
-    const assistantMessage = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: ""
-    };
-
-    const previousHistory = historiesRef.current[characterId] ?? [];
-    const conversationHistory = previousHistory
-      .filter((m) => ["user", "assistant"].includes(m.role))
-      .map(({ role, content }) => ({ role, content }));
-
-    updateHistory(characterId, (items) => [
-      ...items,
-      userMessage,
-      assistantMessage
-    ]);
 
     const controller = new AbortController();
 
@@ -134,6 +108,37 @@ export function useChat(characters) {
     }
   }, [updateHistory]);
 
+  const sendMessage = useCallback(async (rawMessage) => {
+    const message = rawMessage.trim();
+    const characterId = activeIdRef.current;
+    if (!message || loadingRef.current) return;
+    const previousHistory = historiesRef.current[characterId] ?? [];
+    const conversationHistory = previousHistory
+      .filter((m) => ["user", "assistant"].includes(m.role))
+      .map(({ role, content }) => ({ role, content }));
+    const userMessage = { id: crypto.randomUUID(), role: "user", content: message };
+    const assistantMessage = { id: crypto.randomUUID(), role: "assistant", content: "" };
+    updateHistory(characterId, (items) => [...items, userMessage, assistantMessage]);
+    await streamResponse({ characterId, message, conversationHistory, userMessage, assistantMessage });
+  }, [streamResponse, updateHistory]);
+
+  const editMessage = useCallback(async (messageId, rawMessage) => {
+    const message = rawMessage.trim();
+    const characterId = activeIdRef.current;
+    if (!message || loadingRef.current) return;
+    const previousHistory = historiesRef.current[characterId] ?? [];
+    const messageIndex = previousHistory.findIndex((item) => item.id === messageId && item.role === "user");
+    if (messageIndex < 0) return;
+    const userMessage = { ...previousHistory[messageIndex], content: message };
+    const assistantMessage = { id: crypto.randomUUID(), role: "assistant", content: "" };
+    const conversationHistory = previousHistory
+      .slice(0, messageIndex)
+      .filter((m) => ["user", "assistant"].includes(m.role))
+      .map(({ role, content }) => ({ role, content }));
+    updateHistory(characterId, (items) => [...items.slice(0, messageIndex), userMessage, assistantMessage]);
+    await streamResponse({ characterId, message, conversationHistory, userMessage, assistantMessage });
+  }, [streamResponse, updateHistory]);
+
   const clearCurrentChat = useCallback(() => {
     if (loadingRef.current) return;
     const character = characters.find((c) => c.id === activeIdRef.current);
@@ -153,6 +158,7 @@ export function useChat(characters) {
     error,
     selectCharacter,
     sendMessage,
+    editMessage,
     clearCurrentChat
   };
 }

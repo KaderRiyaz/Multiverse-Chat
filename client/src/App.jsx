@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import { characters } from "./data/characters";
 import { useChat } from "./hooks/useChat";
 import AvatarModal from "./components/AvatarModal";
+import ApiKeyModal from "./components/ApiKeyModal";
 
 const avatarStorageKey = "multiverse-chat:custom-avatars:v1";
+const apiKeyStorageKey = "multiverse-chat:gemini-api-key";
 
 function loadCustomAvatars() {
   try {
@@ -20,7 +22,28 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [customAvatars, setCustomAvatars] = useState(loadCustomAvatars);
   const [avatarCharacter, setAvatarCharacter] = useState(null);
-  const { activeId, histories, loading, error, selectCharacter, sendMessage, clearCurrentChat } = useChat(characters);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(apiKeyStorageKey) || "");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { activeId, histories, loading, error, selectCharacter, sendMessage, editMessage, clearCurrentChat } = useChat(characters);
+
+  useEffect(() => {
+    const openSettings = () => setSettingsOpen(true);
+    window.addEventListener("gemini-api-key-required", openSettings);
+    return () => window.removeEventListener("gemini-api-key-required", openSettings);
+  }, []);
+
+  function saveApiKey(value) {
+    const next = value.trim();
+    if (next) localStorage.setItem(apiKeyStorageKey, next);
+    else localStorage.removeItem(apiKeyStorageKey);
+    setApiKey(next);
+    setSettingsOpen(false);
+  }
+
+  function clearApiKey() {
+    localStorage.removeItem(apiKeyStorageKey);
+    setApiKey("");
+  }
 
   const displayCharacters = useMemo(
     () => characters.map((character) => ({ ...character, imageUrl: customAvatars[character.id] || character.imageUrl })),
@@ -50,8 +73,9 @@ export default function App() {
   return (
     <div className="app-shell flex h-dvh overflow-hidden bg-[#090b14] text-slate-100">
       <Sidebar characters={displayCharacters} activeId={activeId} onSelect={selectCharacter} onPreview={setAvatarCharacter} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <ChatWindow key={activeCharacter.id} character={activeCharacter} messages={histories[activeCharacter.id] ?? []} loading={loading} error={error} onSend={sendMessage} onClear={clearCurrentChat} onMenu={() => setMobileOpen(true)} onPreview={setAvatarCharacter} />
+      <ChatWindow key={activeCharacter.id} character={activeCharacter} messages={histories[activeCharacter.id] ?? []} loading={loading} error={error} onSend={sendMessage} onEdit={editMessage} onClear={clearCurrentChat} onMenu={() => setMobileOpen(true)} onPreview={setAvatarCharacter} onOpenSettings={() => setSettingsOpen(true)} />
       {avatarCharacter && <AvatarModal character={avatarCharacter} customImage={customAvatars[avatarCharacter.id]} onSave={saveAvatar} onReset={resetAvatar} onClose={() => setAvatarCharacter(null)} />}
+      {settingsOpen && <ApiKeyModal value={apiKey} onSave={saveApiKey} onClear={clearApiKey} onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

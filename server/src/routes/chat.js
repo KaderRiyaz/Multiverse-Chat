@@ -29,9 +29,9 @@ async function decodeWebSocketMessage(data) {
   return String(data);
 }
 
-async function streamLiveChat({ character, history, message, res, signal }) {
+async function streamLiveChat({ character, history, message, res, signal, apiKey }) {
   const endpoint = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
-  const socket = new WebSocket(`${endpoint}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`);
+  const socket = new WebSocket(`${endpoint}?key=${encodeURIComponent(apiKey)}`);
   let finished = false;
   let requestText = "";
 
@@ -166,12 +166,21 @@ router.post("/chat", async (req, res) => {
     )
     .map(({ role, content }) => ({ role, content }));
 
+  // const apiKey = req.get("x-gemini-api-key")?.trim() || process.env.GEMINI_API_KEY?.trim();
+  const apiKey = req.get("x-gemini-api-key")?.trim();
+  if (!apiKey) {
+    return res.status(400).json({
+      code: "API_KEY_REQUIRED",
+      error: "Add a Gemini API key in Settings before starting a chat."
+    });
+  }
+
   const controller = new AbortController();
   req.on("aborted", () => controller.abort());
 
   try {
     setSseHeaders(res);
-    await streamLiveChat({ character, history, message: message.trim(), res, signal: controller.signal });
+    await streamLiveChat({ character, history, message: message.trim(), res, signal: controller.signal, apiKey });
     if (!res.destroyed && !controller.signal.aborted) {
       res.write("data: [DONE]\n\n");
       res.end();
@@ -185,7 +194,11 @@ router.post("/chat", async (req, res) => {
         error: "Gemini Live could not complete the response. Please try again."
       });
     }
-    res.write(`data: ${JSON.stringify({ error: "The response was interrupted. Please try again." })}\n\n`);
+    const keyError = /api key|api_key|unauthenticated|permission denied|invalid argument/i.test(error.message);
+    res.write(`data: ${JSON.stringify({
+      code: keyError ? "INVALID_API_KEY" : "CHAT_ERROR",
+      error: keyError ? "That Gemini API key was rejected. Open Settings and replace it." : "The response was interrupted. Please try again."
+    })}\n\n`);
     res.end();
   }
 });
