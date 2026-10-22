@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Menu, RotateCcw, Sparkles } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import StarterPrompts from "./StarterPrompts";
+import CharacterAvatar from "./CharacterAvatar";
 
-export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu }) {
+export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview }) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef(null);
 
@@ -31,7 +32,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
       <header className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/[0.07] px-4 sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
           <button onClick={onMenu} aria-label="Open character selector" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 lg:hidden"><Menu size={21} /></button>
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10" style={{ background: `${character.themeColor}14`, color: character.themeColor }}><Sparkles size={22} /></div>
+          <CharacterAvatar character={character} onClick={() => onPreview(character)} />
           <div className="min-w-0">
             <h2 className="truncate font-semibold text-white">{character.name}</h2>
             <p className="mt-1 text-xs text-slate-500">{character.universe} universe · AI persona</p>

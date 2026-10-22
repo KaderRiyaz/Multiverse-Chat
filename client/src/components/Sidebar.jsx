@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Search, Shield, Sparkles, X } from "lucide-react";
+import { Search, Shield, X } from "lucide-react";
+import CharacterAvatar from "./CharacterAvatar";
 
-export default function Sidebar({ characters, activeId, onSelect, mobileOpen, onClose }) {
+export default function Sidebar({ characters, activeId, onSelect, onPreview, mobileOpen, onClose }) {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
 
@@ -58,9 +59,7 @@ export default function Sidebar({ characters, activeId, onSelect, mobileOpen, on
                 }}
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition hover:bg-white/[0.05] ${active ? "bg-white/[0.06]" : "bg-transparent"}`}
               >
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-transparent" style={{ color: character.themeColor }}>
-                  <Sparkles size={21} />
-                </div>
+                <CharacterAvatar character={character} onClick={(event) => { event.stopPropagation(); onPreview(character); }} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-100">{character.name}</p>
                   <p className="mt-1 text-xs text-slate-500">{character.universe}</p>
