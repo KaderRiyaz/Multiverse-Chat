@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Menu, RotateCcw, Settings, Sparkles } from "lucide-react";
+import { ArrowUp, Menu, Mic, MicOff, RotateCcw, Settings, Sparkles, Volume2, VolumeX } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import StarterPrompts from "./StarterPrompts";
 import CharacterAvatar from "./CharacterAvatar";
 
-export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview, onEdit, onOpenSettings }) {
+export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview, onEdit, onRetry, onOpenSettings }) {
   const [draft, setDraft] = useState("");
+  const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem("multiverse-chat:auto-play-voice") === "true");
+  const [recording, setRecording] = useState(false);
+  const recognitionRef = useRef(null);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -25,6 +28,32 @@ export default function ChatWindow({ character, messages, loading, error, onSend
     submit();
   }
 
+  function toggleAutoPlay() {
+    setAutoPlay((current) => {
+      const next = !current;
+      localStorage.setItem("multiverse-chat:auto-play-voice", String(next));
+      return next;
+    });
+  }
+
+  function toggleRecording() {
+    if (recording) { recognitionRef.current?.stop(); return; }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0].transcript).join("");
+      setDraft(transcript);
+    };
+    recognition.onend = () => { setRecording(false); recognitionRef.current = null; };
+    recognition.onerror = () => { setRecording(false); recognitionRef.current = null; };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setRecording(true);
+  }
+
   const showStarters = messages.length <= 1 && !loading && !error;
 
   return (
@@ -38,7 +67,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
             <p className="mt-1 text-xs text-slate-500">{character.universe} universe · AI persona</p>
           </div>
         </div>
-        <div className="flex items-center gap-2"><button onClick={onOpenSettings} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white" title="Gemini API key settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button><button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
+        <div className="flex items-center gap-2"><button onClick={toggleAutoPlay} className={`rounded-lg border border-white/[0.08] p-2 text-slate-400 transition hover:text-white ${autoPlay ? "text-cyan-300" : ""}`} title={autoPlay ? "Mute automatic character voice" : "Enable automatic character voice"}>{autoPlay ? <Volume2 size={15} /> : <VolumeX size={15} />}</button><button onClick={onOpenSettings} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white" title="Gemini API key settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button><button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
           <RotateCcw size={14} /><span className="hidden sm:inline">New chat</span>
         </button></div>
       </header>
@@ -58,6 +87,9 @@ export default function ChatWindow({ character, messages, loading, error, onSend
               message={message}
               character={character}
               onEdit={onEdit}
+              onRetry={onRetry}
+              autoPlay={autoPlay && index === messages.length - 1}
+              canRegenerate={!message.failed && message.role === "assistant" && index === messages.length - 1 && index > 0 && messages[index - 1]?.role === "user"}
               streaming={loading && index === messages.length - 1 && message.role === "assistant"}
             />
           ))}
@@ -73,6 +105,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
         <div className="mx-auto max-w-3xl">
           <form onSubmit={handleSubmit} className="flex items-end gap-3 rounded-2xl border border-white/10 bg-[#111420] p-2 transition focus-within:border-white/20" style={{ boxShadow: `0 0 24px ${character.themeColor}08` }}>
             <textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }} placeholder={`Message ${character.name}...`} aria-label="Your message" maxLength={4000} rows={1} className="max-h-36 min-h-11 flex-1 resize-y bg-transparent px-3 py-3 text-sm leading-5 text-white outline-none placeholder:text-slate-600" />
+            <button type="button" onClick={toggleRecording} disabled={loading || !(window.SpeechRecognition || window.webkitSpeechRecognition)} aria-label={recording ? "Stop recording" : "Start voice input"} title={recording ? "Stop recording" : "Voice input (browser speech recognition)"} className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30 ${recording ? "animate-pulse bg-red-500/20 text-red-300" : ""}`}>{recording ? <MicOff size={18} /> : <Mic size={18} />}</button>
             <button type="submit" disabled={loading || !draft.trim()} aria-label="Send message" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-black transition disabled:cursor-not-allowed disabled:opacity-30" style={{ background: character.themeColor }}><ArrowUp size={19} /></button>
           </form>
           <div className="mt-3 flex items-center justify-between gap-3 text-[10px] text-slate-600"><span>Enter to send · Shift + Enter for a new line</span><span>{draft.length}/4000</span></div>

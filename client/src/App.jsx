@@ -5,6 +5,7 @@ import { characters } from "./data/characters";
 import { useChat } from "./hooks/useChat";
 import AvatarModal from "./components/AvatarModal";
 import ApiKeyModal from "./components/ApiKeyModal";
+import ChatErrorBoundary from "./components/ChatErrorBoundary";
 
 const avatarStorageKey = "multiverse-chat:custom-avatars:v1";
 const apiKeyStorageKey = "multiverse-chat:gemini-api-key";
@@ -24,7 +25,7 @@ export default function App() {
   const [avatarCharacter, setAvatarCharacter] = useState(null);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(apiKeyStorageKey) || "");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { activeId, histories, loading, error, selectCharacter, sendMessage, editMessage, clearCurrentChat } = useChat(characters);
+  const { activeId, histories, loading, error, selectCharacter, sendMessage, editMessage, retryMessage, clearCurrentChat } = useChat(characters);
 
   useEffect(() => {
     const openSettings = () => setSettingsOpen(true);
@@ -73,7 +74,7 @@ export default function App() {
   return (
     <div className="app-shell flex h-dvh overflow-hidden bg-[#090b14] text-slate-100">
       <Sidebar characters={displayCharacters} activeId={activeId} onSelect={selectCharacter} onPreview={setAvatarCharacter} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <ChatWindow key={activeCharacter.id} character={activeCharacter} messages={histories[activeCharacter.id] ?? []} loading={loading} error={error} onSend={sendMessage} onEdit={editMessage} onClear={clearCurrentChat} onMenu={() => setMobileOpen(true)} onPreview={setAvatarCharacter} onOpenSettings={() => setSettingsOpen(true)} />
+      <ChatErrorBoundary key={activeCharacter.id} onReset={clearCurrentChat}><ChatWindow character={activeCharacter} messages={histories[activeCharacter.id] ?? []} loading={loading} error={error} onSend={sendMessage} onEdit={editMessage} onRetry={retryMessage} onClear={clearCurrentChat} onMenu={() => setMobileOpen(true)} onPreview={setAvatarCharacter} onOpenSettings={() => setSettingsOpen(true)} /></ChatErrorBoundary>
       {avatarCharacter && <AvatarModal character={avatarCharacter} customImage={customAvatars[avatarCharacter.id]} onSave={saveAvatar} onReset={resetAvatar} onClose={() => setAvatarCharacter(null)} />}
       {settingsOpen && <ApiKeyModal value={apiKey} onSave={saveApiKey} onClear={clearApiKey} onClose={() => setSettingsOpen(false)} />}
     </div>

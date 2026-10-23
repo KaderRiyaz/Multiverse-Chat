@@ -7,6 +7,18 @@ const GEMINI_MODEL = "gemini-3.8-live";
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_HISTORY_MESSAGE_LENGTH = 4000;
+const VOICES = {
+  "captain-america": "Orus",
+  "iron-man": "Puck",
+  thor: "Fenrir",
+  batman: "Charon",
+  "wonder-woman": "Aoede",
+  superman: "Zephyr",
+  "spider-man": "Leda",
+  "black-panther": "Charon",
+  "the-flash": "Puck",
+  "green-lantern": "Orus"
+};
 function setSseHeaders(res) {
   res.status(200);
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -63,7 +75,8 @@ async function streamLiveChat({ character, history, message, res, signal, apiKey
             generationConfig: {
               responseModalities: ["AUDIO"],
               temperature: 0.8,
-              maxOutputTokens: 700
+              maxOutputTokens: 700,
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICES[character.id] || "Puck" } } }
             },
             outputAudioTranscription: {},
             systemInstruction: { parts: [{ text: character.systemInstruction }] }
@@ -99,6 +112,12 @@ async function streamLiveChat({ character, history, message, res, signal, apiKey
           return;
         }
         const serverContent = payload.serverContent;
+        for (const part of serverContent?.modelTurn?.parts || []) {
+          const inlineData = part.inlineData;
+          if (inlineData?.data) {
+            res.write(`data: ${JSON.stringify({ audio: { data: inlineData.data, mimeType: inlineData.mimeType || "audio/pcm;rate=24000" } })}\n\n`);
+          }
+        }
         const text = serverContent?.outputTranscription?.text
           ?? serverContent?.modelTurn?.parts?.map((part) => part.text || "").join("");
         if (typeof text === "string" && text) {
@@ -166,8 +185,7 @@ router.post("/chat", async (req, res) => {
     )
     .map(({ role, content }) => ({ role, content }));
 
-  // const apiKey = req.get("x-gemini-api-key")?.trim() || process.env.GEMINI_API_KEY?.trim();
-  const apiKey = req.get("x-gemini-api-key")?.trim();
+  const apiKey = req.get("x-gemini-api-key")?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return res.status(400).json({
       code: "API_KEY_REQUIRED",

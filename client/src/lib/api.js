@@ -6,6 +6,7 @@ export async function streamChat({
   message,
   conversationHistory,
   onChunk,
+  onAudio,
   signal
 }) {
   const customKey = localStorage.getItem("multiverse-chat:gemini-api-key")?.trim();
@@ -58,6 +59,7 @@ export async function streamChat({
         }
         if (parsed.error) throw new Error(parsed.error);
         if (typeof parsed.content === "string") onChunk(parsed.content);
+        if (parsed.audio?.data && onAudio) onAudio(parsed.audio);
       }
 
       if (done) break;
