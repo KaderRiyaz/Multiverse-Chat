@@ -18,7 +18,7 @@ function pcmUrl(chunks, mimeType = "audio/pcm;rate=24000") {
   }
 }
 
-export default function MessageBubble({ message, character, streaming, onEdit, onRetry, canRegenerate, autoPlay }) {
+export default function MessageBubble({ message, character, streaming, onEdit, onRetry, canRegenerate, autoPlay, userAvatar }) {
   const isUser = message.role === "user";
   const messageText = typeof message.content === "string" ? message.content : "";
   const [copied, setCopied] = useState(false);
@@ -76,7 +76,7 @@ export default function MessageBubble({ message, character, streaming, onEdit, o
   return (
     <div className={`group animate-fade-in flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {isUser ? (
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "#ffffff12", color: "#e2e8f0" }}><User size={17} /></div>
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ background: "#ffffff12", color: "#e2e8f0" }}>{userAvatar ? <img src={userAvatar} alt="" className="h-full w-full object-cover" /> : <User size={17} />}</div>
       ) : <CharacterAvatar character={character} size="sm" />}
       <div className={`max-w-[85%] sm:max-w-[75%] ${isUser ? "text-right" : ""}`}>
         <p className="mb-1.5 text-[11px] font-semibold text-slate-500">{isUser ? "YOU" : character.name.toUpperCase()}</p>

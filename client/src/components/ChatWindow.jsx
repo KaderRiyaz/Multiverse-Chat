@@ -4,7 +4,7 @@ import MessageBubble from "./MessageBubble";
 import StarterPrompts from "./StarterPrompts";
 import CharacterAvatar from "./CharacterAvatar";
 
-export default function ChatWindow({ character, messages, loading, error, onSend, onClear, onMenu, onPreview, onEdit, onRetry, onOpenSettings }) {
+export default function ChatWindow({ user, userAvatar, onAuth, onProfile, onLogout, character, messages, loading, error, onSend, onClear, onMenu, onPreview, onEdit, onRetry, onOpenSettings }) {
   const [draft, setDraft] = useState("");
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem("multiverse-chat:auto-play-voice") === "true");
   const [recording, setRecording] = useState(false);
@@ -67,7 +67,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
             <p className="mt-1 text-xs text-slate-500">{character.universe} universe · AI persona</p>
           </div>
         </div>
-        <div className="flex items-center gap-2"><button onClick={toggleAutoPlay} className={`rounded-lg border border-white/[0.08] p-2 text-slate-400 transition hover:text-white ${autoPlay ? "text-cyan-300" : ""}`} title={autoPlay ? "Mute automatic character voice" : "Enable automatic character voice"}>{autoPlay ? <Volume2 size={15} /> : <VolumeX size={15} />}</button><button onClick={onOpenSettings} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white" title="Gemini API key settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button><button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
+        <div className="flex items-center gap-2"><button onClick={toggleAutoPlay} className={`rounded-lg border border-white/[0.08] p-2 text-slate-400 transition hover:text-white ${autoPlay ? "text-cyan-300" : ""}`} title={autoPlay ? "Mute automatic character voice" : "Enable automatic character voice"}>{autoPlay ? <Volume2 size={15} /> : <VolumeX size={15} />}</button><button onClick={onOpenSettings} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white" title="Gemini API key settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button><div className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-2 py-1"><button onClick={user ? onProfile : onAuth} className="rounded-full hover:ring-2 hover:ring-cyan-300/40" title={user ? "Open profile" : "Sign in"}><div className="grid h-6 w-6 place-items-center overflow-hidden rounded-full bg-cyan-400/15 text-[10px] font-bold text-cyan-200">{user?.photoURL ? <img src={user.photoURL} alt="" className="h-full w-full object-cover" /> : (user?.displayName || "G").slice(0, 1).toUpperCase()}</div></button>{user ? <><span className="hidden max-w-20 truncate text-[10px] text-slate-300 sm:inline">{user.displayName || user.phoneNumber || "Account"}</span><button onClick={onLogout} className="text-[10px] text-slate-400 hover:text-white" title="Log out">Log out</button></> : <button onClick={onAuth} className="text-[10px] text-cyan-300 hover:text-cyan-200">Sign in</button>}</div><button onClick={onClear} disabled={loading} className="flex items-center gap-2 rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-400 transition hover:text-white disabled:opacity-40" title="Clear this character's conversation">
           <RotateCcw size={14} /><span className="hidden sm:inline">New chat</span>
         </button></div>
       </header>
@@ -85,6 +85,7 @@ export default function ChatWindow({ character, messages, loading, error, onSend
             <MessageBubble
               key={message.id}
               message={message}
+              userAvatar={userAvatar}
               character={character}
               onEdit={onEdit}
               onRetry={onRetry}

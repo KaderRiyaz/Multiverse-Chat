@@ -9,7 +9,8 @@ export async function streamChat({
   onAudio,
   signal
 }) {
-  const customKey = localStorage.getItem("multiverse-chat:gemini-api-key")?.trim();
+  const scope = localStorage.getItem("multiverse-chat:active-user") || "guest";
+  const customKey = localStorage.getItem(`multiverse-chat:${scope}:gemini-api-key`)?.trim();
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: {

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { streamChat } from "../lib/api";
 
-const storageKey = (id) => `multiverse-chat:v1:${id}`;
+const storageKey = (scope, id) => `multiverse-chat:${scope}:v1:${id}`;
 
-function loadHistory(id, character) {
+function loadHistory(scope, id, character) {
   try {
-    const stored = JSON.parse(localStorage.getItem(storageKey(id)));
+    const stored = JSON.parse(localStorage.getItem(storageKey(scope, id)));
     if (Array.isArray(stored)) {
       const cleaned = stored.flatMap((item) => {
         if (!item || !["user", "assistant"].includes(item.role)) return [];
@@ -24,7 +24,7 @@ function loadHistory(id, character) {
         }];
       });
       if (cleaned.length) {
-        try { localStorage.setItem(storageKey(id), JSON.stringify(cleaned)); } catch { /* storage may be unavailable */ }
+        try { localStorage.setItem(storageKey(scope, id), JSON.stringify(cleaned)); } catch { /* storage may be unavailable */ }
         return cleaned;
       }
     }
@@ -38,10 +38,10 @@ function loadHistory(id, character) {
   }];
 }
 
-export function useChat(characters) {
+export function useChat(characters, scope = "guest") {
   const [activeId, setActiveId] = useState(characters[0].id);
   const [histories, setHistories] = useState(() =>
-    Object.fromEntries(characters.map((c) => [c.id, loadHistory(c.id, c)]))
+    Object.fromEntries(characters.map((c) => [c.id, loadHistory(scope, c.id, c)]))
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +49,13 @@ export function useChat(characters) {
   const historiesRef = useRef(histories);
   const loadingRef = useRef(false);
   const saveTimersRef = useRef(new Map());
+
+  useEffect(() => {
+    const next = Object.fromEntries(characters.map((c) => [c.id, loadHistory(scope, c.id, c)]));
+    historiesRef.current = next;
+    setHistories(next);
+    setError("");
+  }, [scope, characters]);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -64,7 +71,7 @@ export function useChat(characters) {
       clearTimeout(saveTimersRef.current.get(id));
       saveTimersRef.current.set(id, setTimeout(() => {
         try {
-          localStorage.setItem(storageKey(id), JSON.stringify(historiesRef.current[id] ?? []));
+          localStorage.setItem(storageKey(scope, id), JSON.stringify(historiesRef.current[id] ?? []));
         } catch {
           setError("Chat could not be saved in this browser.");
         }
@@ -72,7 +79,7 @@ export function useChat(characters) {
       }, 250));
       return next;
     });
-  }, []);
+  }, [scope]);
 
   const selectCharacter = useCallback((id) => {
     if (!characters.some((c) => c.id === id)) return;
